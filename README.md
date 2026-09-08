@@ -18,8 +18,10 @@ flowchart LR
   UI[React + Vite user interface] --> Adapter[src/lib/api.ts adapter]
   Adapter --> API[Express local API]
   API --> DB[(SQLite local database)]
+  API --> Crawler[Scheduled seeded-feed crawler]
+  Crawler --> SSE[Server-sent event alerts]
+  SSE --> UI
   API -. future .-> ATS[Approved career-page / ATS integrations]
-  API -. future .-> Notify[Notification service]
   API -. future .-> Alumni[Consent-based alumni directory]
 ```
 
@@ -54,15 +56,20 @@ The Express server writes roles to `pratham-demo.db` using SQLite. Industry publ
 | Academician | List FDP, consultancy, and research opportunities and communicate mentorship outcomes. |
 | Institution | See readiness, role-fit improvement, participation, partner activity, placement trends, and skill gaps. |
 
+## Resume Intelligence
+
+Student users can paste the supplied sample or their own well-formatted resume, review the extracted profile, and score it against every Pratham role archetype. Extraction is intentionally rule-based rather than an AI claim: it uses section headings, line heuristics, and the local skill taxonomy. The confirmed structured profile is persisted in SQLite and is the same profile used by the role feed, radar, eligibility results, and score-carrying target watches.
+
 ## What's real vs simulated
 
 | Real in this build | Simulated for the local demo |
 | --- | --- |
 | Deterministic skills/experience/timing scoring | Internet-facing career-page scraping and ATS connections |
 | Rule-driven verification states in the local role flow | Actual company verification responses |
-| Express REST API and SQLite persistence | Push notifications and real emails |
+| Express REST API, SQLite persistence, scheduled crawler and live SSE browser alerts | Real phone/email notifications |
 | Cross-tab data visibility through shared local database | Real alumni/referral directory data |
 | Search, filters, sorting, resume text extraction, and PDF reports | Real user accounts and production portfolio credentials |
+| Rule-based resume extraction, editable profile review, archetype scoring, persisted watches, and SSE crawl matching | Live internet scraping and real-world hourly cadence; the company feed is seeded and the interval is compressed for the demo |
 
 All companies and people shown are demo fixtures. The app never contacts a real person.
 
@@ -103,3 +110,11 @@ The next production steps are approved ATS/career-page connectors, authenticated
 After pasting resume text, Pratham now ranks six seeded role archetypes (ML, frontend, backend, data, DevOps, and QA) as **Eligible**, **Close**, or **Not yet ready**. The explanation reuses the same `computeMatch` calculation used in the role feed, so there is one defensible scoring model throughout the product.
 
 Students can choose only from the demo’s seeded companies and archetypes, then create a persistent Watch subscription. `server/index.js` runs a real scheduled crawler every **30 seconds** (`CRAWL_INTERVAL_MS`) against a seeded career-feed cycle. This compressed interval is an honest demonstration substitute for the intended real-world continuous / within-an-hour cadence. Matching active watches create real SQLite notification records and are pushed to open Student screens through Server-Sent Events (SSE), without a page refresh.
+
+## Demo safety and roadmap
+
+The navigation status indicator reads the local health endpoint and shows API/crawler connectivity, the latest crawl and its countdown. Packaged Fraunces and Inter font files are local dependencies, so the running demo has no font-CDN dependency.
+
+For a clean rehearsal database, run `npm run seed:reset`, then `npm run dev`; this deliberately removes the local SQLite database and its WAL sidecars before the normal one-time seed runs again. Docker is also supported with `docker compose up` and persists SQLite data in its `pratham_data` volume.
+
+This verified local prototype intentionally uses a seeded company feed and local SSE alerts. Production work remains: approved ATS/career-page integrations behind `api.ts`, authenticated accounts, device push delivery, consent-based alumni data, regional-language content, and deployed infrastructure.
